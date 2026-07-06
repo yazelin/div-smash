@@ -14,6 +14,16 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+// Behind the nginx reverse proxy, req.socket.remoteAddress is nginx's own
+// address, not the real visitor's - which would put every public visitor
+// in the same rate-limit bucket. Prefer the proxy-forwarded client IP;
+// falls back to the socket address for local dev, where there's no proxy.
+function clientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.socket.remoteAddress || 'unknown';
+}
+
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -35,7 +45,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const ip = req.socket.remoteAddress || 'unknown';
+  const ip = clientIp(req);
   if (!allow(ip)) {
     sendJson(res, 429, { error: 'rate limit exceeded, try again in a minute' });
     return;

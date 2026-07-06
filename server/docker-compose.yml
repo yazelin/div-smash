@@ -1,0 +1,12 @@
+services:
+  div-smash:
+    build:
+      context: .
+    container_name: div-smash
+    restart: unless-stopped
+    networks:
+      - nginx_bridge_network
+
+networks:
+  nginx_bridge_network:
+    external: true
