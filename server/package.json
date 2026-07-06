@@ -1,0 +1,12 @@
+{
+  "name": "div-smash-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}
