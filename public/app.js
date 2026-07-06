@@ -67,6 +67,20 @@ async function loadUrl(url) {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (screenshotImg) {
+    // draw the intact page first so anything not covered by a shard
+    // (background colour, padding, content the DOM walk skipped) still
+    // shows the real screenshot instead of the canvas's own background.
+    ctx.drawImage(screenshotImg, 0, 0);
+
+    // punch a hole where a shard has actually broken loose, so its
+    // original spot looks removed instead of duplicated.
+    for (const body of shardBodies) {
+      if (!body.isStatic) {
+        const { x, y, w, h } = body.shardRect;
+        ctx.clearRect(x, y, w, h);
+      }
+    }
+
     for (const body of shardBodies) {
       const { x, y, w, h } = body.shardRect;
       ctx.save();
