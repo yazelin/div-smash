@@ -16,7 +16,7 @@ function startFixtureServer() {
   });
 }
 
-test('captureShards extracts the expected shards from the fixture page', async () => {
+test('captureShards fully tiles the viewport with reasonably-sized, breakable shards', async () => {
   const server = await startFixtureServer();
   const port = server.address().port;
   try {
@@ -25,11 +25,22 @@ test('captureShards extracts the expected shards from the fixture page', async (
     assert.equal(typeof result.screenshot, 'string');
     assert.equal(result.screenshot.startsWith('data:image/png;base64,'), true);
 
-    assert.equal(result.shards.length, 5);
+    // enough pieces to feel "fine", not just a handful of giant chunks
+    assert.equal(result.shards.length > 20, true, `expected many shards, got ${result.shards.length}`);
+
     for (const shard of result.shards) {
       const area = shard.w * shard.h;
-      assert.equal(area >= 1600, true, `shard too small: ${JSON.stringify(shard)}`);
-      assert.equal(area <= 819200, true, `shard too large: ${JSON.stringify(shard)}`);
+      assert.equal(area > 0, true, `zero-area shard: ${JSON.stringify(shard)}`);
+      assert.equal(area <= 1280 * 800, true, `shard bigger than the viewport: ${JSON.stringify(shard)}`);
+    }
+
+    // every sampled point across the viewport must be covered by some shard -
+    // otherwise that spot would show a permanently unbreakable background.
+    for (let y = 20; y < 800; y += 40) {
+      for (let x = 20; x < 1280; x += 40) {
+        const covered = result.shards.some(s => x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h);
+        assert.equal(covered, true, `gap at (${x},${y}) - not covered by any shard`);
+      }
     }
   } finally {
     server.close();

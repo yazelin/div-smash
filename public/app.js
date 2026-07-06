@@ -132,23 +132,34 @@ function render() {
   requestAnimationFrame(render);
 }
 
+const EXPLOSION_RADIUS = 140;
+const EXPLOSION_STRENGTH = 14;
+
 canvas.addEventListener('click', (evt) => {
   if (!engine) return;
   const rect = canvas.getBoundingClientRect();
   const point = { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
-  for (let i = shardBodies.length - 1; i >= 0; i--) {
-    const body = shardBodies[i];
-    if (Matter.Vertices.contains(body.vertices, point)) {
-      playBreakSound();
-      Matter.Body.setStatic(body, false);
-      Matter.Body.setVelocity(body, {
-        x: (Math.random() - 0.5) * 6,
-        y: -4 - Math.random() * 3,
-      });
-      Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
-      break;
-    }
+
+  let hitAny = false;
+  for (const body of shardBodies) {
+    const dx = body.position.x - point.x;
+    const dy = body.position.y - point.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > EXPLOSION_RADIUS) continue;
+
+    hitAny = true;
+    const falloff = 1 - dist / EXPLOSION_RADIUS;
+    const dirX = dist > 1 ? dx / dist : Math.random() - 0.5;
+    const dirY = dist > 1 ? dy / dist : -1;
+
+    Matter.Body.setStatic(body, false);
+    Matter.Body.setVelocity(body, {
+      x: dirX * EXPLOSION_STRENGTH * falloff + (Math.random() - 0.5) * 2,
+      y: dirY * EXPLOSION_STRENGTH * falloff - 2,
+    });
+    Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.3);
   }
+  if (hitAny) playBreakSound();
 });
 
 loadBtn.addEventListener('click', () => loadUrl(urlInput.value.trim()));
