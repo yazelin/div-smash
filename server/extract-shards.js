@@ -9,7 +9,7 @@ async function captureShards(url) {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: VIEWPORT });
-    await page.goto(url, { waitUntil: 'load', timeout: 15000 });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 15000 });
 
     const shards = await page.evaluate(({ width, height, minArea, maxAreaRatio }) => {
       const maxArea = width * height * maxAreaRatio;
