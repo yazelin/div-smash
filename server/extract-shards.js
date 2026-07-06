@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 
 const VIEWPORT = { width: 1280, height: 800 };
 const MIN_AREA = 40 * 40;
-const MAX_AREA_RATIO = 0.8;
+const MAX_AREA_RATIO = 0.15;
 const MAX_SHARDS = 80;
 
 async function captureShards(url) {

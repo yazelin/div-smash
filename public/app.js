@@ -87,10 +87,11 @@ canvas.addEventListener('click', (evt) => {
     const body = shardBodies[i];
     if (Matter.Vertices.contains(body.vertices, point)) {
       Matter.Body.setStatic(body, false);
-      Matter.Body.applyForce(body, body.position, {
-        x: (Math.random() - 0.5) * 0.05,
-        y: -0.02,
+      Matter.Body.setVelocity(body, {
+        x: (Math.random() - 0.5) * 6,
+        y: -4 - Math.random() * 3,
       });
+      Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
       break;
     }
   }
