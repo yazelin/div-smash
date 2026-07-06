@@ -1,5 +1,8 @@
-const CAPTURE_ENDPOINT = 'http://localhost:3000/capture';
-const RECENT_ENDPOINT = 'http://localhost:3000/recent';
+const API_BASE = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000'
+  : 'https://ching-tech.ddns.net/div-smash-api';
+const CAPTURE_ENDPOINT = `${API_BASE}/capture`;
+const RECENT_ENDPOINT = `${API_BASE}/recent`;
 const VIEWPORT = { width: 1280, height: 800 };
 const WORLD_HEIGHT = 1200;
 
