@@ -12,6 +12,45 @@ let engine = null;
 let runner = null;
 let shardBodies = [];
 let screenshotImg = null;
+let audioCtx = null;
+
+function playBreakSound() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+
+  // noise burst for the "crash"
+  const bufferSize = Math.floor(audioCtx.sampleRate * 0.3);
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+  }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = 'highpass';
+  noiseFilter.frequency.value = 2000;
+  const noiseGain = audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(0.4, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+  noise.connect(noiseFilter).connect(noiseGain).connect(audioCtx.destination);
+  noise.start(now);
+
+  // a handful of high-pitched "tinkling shard" tones
+  [3200, 4200, 5300, 6100].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq * (0.9 + Math.random() * 0.2);
+    const gain = audioCtx.createGain();
+    const start = now + i * 0.02;
+    gain.gain.setValueAtTime(0.15, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(start);
+    osc.stop(start + 0.3);
+  });
+}
 
 function setupWorld() {
   if (runner) Matter.Runner.stop(runner);
@@ -100,6 +139,7 @@ canvas.addEventListener('click', (evt) => {
   for (let i = shardBodies.length - 1; i >= 0; i--) {
     const body = shardBodies[i];
     if (Matter.Vertices.contains(body.vertices, point)) {
+      playBreakSound();
       Matter.Body.setStatic(body, false);
       Matter.Body.setVelocity(body, {
         x: (Math.random() - 0.5) * 6,
