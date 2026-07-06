@@ -1,4 +1,5 @@
 const CAPTURE_ENDPOINT = 'http://localhost:3000/capture';
+const RECENT_ENDPOINT = 'http://localhost:3000/recent';
 const VIEWPORT = { width: 1280, height: 800 };
 const WORLD_HEIGHT = 1200;
 
@@ -7,6 +8,28 @@ const ctx = canvas.getContext('2d');
 const urlInput = document.getElementById('url-input');
 const loadBtn = document.getElementById('load-btn');
 const statusEl = document.getElementById('status');
+const recentEl = document.getElementById('recent');
+
+async function refreshRecentUrls() {
+  try {
+    const res = await fetch(RECENT_ENDPOINT);
+    const data = await res.json();
+    recentEl.innerHTML = '';
+    if (!data.urls || data.urls.length === 0) return;
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = '最近有人打過:';
+    recentEl.appendChild(label);
+    for (const url of data.urls) {
+      const btn = document.createElement('button');
+      btn.textContent = url;
+      btn.addEventListener('click', () => { urlInput.value = url; });
+      recentEl.appendChild(btn);
+    }
+  } catch {
+    // best-effort - no recent list is not worth surfacing as an error
+  }
+}
 
 let engine = null;
 let runner = null;
@@ -96,6 +119,7 @@ async function loadUrl(url) {
       return body;
     });
     statusEl.textContent = `已載入,${shardBodies.length} 塊碎片,點擊打爛它們`;
+    refreshRecentUrls();
   } catch (err) {
     statusEl.textContent = `錯誤: ${err.message}`;
   } finally {
@@ -166,3 +190,4 @@ loadBtn.addEventListener('click', () => loadUrl(urlInput.value.trim()));
 
 setupWorld();
 render();
+refreshRecentUrls();

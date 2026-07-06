@@ -11,6 +11,10 @@
   #load-btn { padding: 8px 16px; }
   #stage { display: block; background: #333; margin: 0 auto; }
   #status { padding: 0 12px 12px; font-size: 13px; color: #aaa; }
+  #recent { padding: 0 12px 12px; font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #recent span.label { color: #888; }
+  #recent button { background: #333; color: #ccc; border: 1px solid #555; border-radius: 12px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  #recent button:hover { background: #444; }
 </style>
 </head>
 <body>
@@ -19,6 +23,7 @@
     <button id="load-btn">載入</button>
   </div>
   <div id="status"></div>
+  <div id="recent"></div>
   <canvas id="stage" width="1280" height="1200"></canvas>
   <script src="app.js"></script>
 </body>
