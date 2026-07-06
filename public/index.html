@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>div-smash — 網頁解壓小遊戲</title>
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #222; color: #eee; }
+  #controls { padding: 12px; display: flex; gap: 8px; }
+  #url-input { flex: 1; padding: 8px; font-size: 14px; }
+  #load-btn { padding: 8px 16px; }
+  #stage { display: block; background: #333; margin: 0 auto; }
+  #status { padding: 0 12px 12px; font-size: 13px; color: #aaa; }
+</style>
+</head>
+<body>
+  <div id="controls">
+    <input id="url-input" placeholder="貼上要破壞的網址,例如 https://example.com" value="https://example.com">
+    <button id="load-btn">載入</button>
+  </div>
+  <div id="status"></div>
+  <canvas id="stage" width="1280" height="1200"></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
