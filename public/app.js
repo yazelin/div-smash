@@ -4,10 +4,11 @@ const API_BASE = location.hostname === 'localhost' || location.hostname === '127
 const CAPTURE_ENDPOINT = `${API_BASE}/capture`;
 const RECENT_ENDPOINT = `${API_BASE}/recent`;
 const VIEWPORT = { width: 1280, height: 800 };
-const WORLD_HEIGHT = 1200;
+const MIN_WORLD_HEIGHT = VIEWPORT.height;
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
+const topBar = document.getElementById('top-bar');
 const urlInput = document.getElementById('url-input');
 const loadBtn = document.getElementById('load-btn');
 const statusEl = document.getElementById('status');
@@ -26,10 +27,7 @@ async function refreshRecentUrls() {
     for (const url of data.urls) {
       const btn = document.createElement('button');
       btn.textContent = url;
-      btn.addEventListener('click', () => {
-        urlInput.value = url;
-        loadUrl(url);
-      });
+      btn.addEventListener('click', () => loadUrl(url));
       recentEl.appendChild(btn);
     }
   } catch {
@@ -42,6 +40,7 @@ let runner = null;
 let shardBodies = [];
 let screenshotImg = null;
 let audioCtx = null;
+let offsetX = 0;
 
 function playBreakSound() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -82,20 +81,36 @@ function playBreakSound() {
 }
 
 function setupWorld() {
+  // the falling/breaking arena should fill the actual browser window - full
+  // width, and full height below the top bar (footer is fixed/overlaid, so
+  // it doesn't need to be subtracted) - not a fixed 1280x1200 box.
+  const canvasWidth = Math.max(window.innerWidth, VIEWPORT.width);
+  const canvasHeight = Math.max(window.innerHeight - topBar.getBoundingClientRect().height, MIN_WORLD_HEIGHT);
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  offsetX = (canvasWidth - VIEWPORT.width) / 2;
+
   if (runner) Matter.Runner.stop(runner);
   engine = Matter.Engine.create();
   engine.world.gravity.y = 1;
 
-  const ground = Matter.Bodies.rectangle(VIEWPORT.width / 2, WORLD_HEIGHT + 25, VIEWPORT.width * 2, 50, { isStatic: true });
-  const leftWall = Matter.Bodies.rectangle(-25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT * 2, { isStatic: true });
-  const rightWall = Matter.Bodies.rectangle(VIEWPORT.width + 25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT * 2, { isStatic: true });
+  const ground = Matter.Bodies.rectangle(canvasWidth / 2, canvasHeight + 25, canvasWidth * 2, 50, { isStatic: true });
+  const leftWall = Matter.Bodies.rectangle(-25, canvasHeight / 2, 50, canvasHeight * 2, { isStatic: true });
+  const rightWall = Matter.Bodies.rectangle(canvasWidth + 25, canvasHeight / 2, 50, canvasHeight * 2, { isStatic: true });
   Matter.World.add(engine.world, [ground, leftWall, rightWall]);
 
   runner = Matter.Runner.create();
   Matter.Runner.run(runner, engine);
 }
 
-async function loadUrl(url) {
+function normalizeUrl(raw) {
+  const trimmed = raw.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+async function loadUrl(rawUrl) {
+  const url = normalizeUrl(rawUrl);
+  urlInput.value = url;
   statusEl.textContent = '載入中...';
   loadBtn.disabled = true;
   try {
@@ -117,7 +132,7 @@ async function loadUrl(url) {
 
     setupWorld();
     shardBodies = data.shards.map(shard => {
-      const cx = shard.x + shard.w / 2;
+      const cx = shard.x + shard.w / 2 + offsetX;
       const cy = shard.y + shard.h / 2;
       const body = Matter.Bodies.rectangle(cx, cy, shard.w, shard.h, { isStatic: true });
       body.shardRect = shard;
@@ -125,6 +140,7 @@ async function loadUrl(url) {
       return body;
     });
     statusEl.textContent = `已載入,${shardBodies.length} 塊碎片,點擊打爛它們`;
+    history.replaceState(null, '', `#p=${encodeURIComponent(url)}`);
     refreshRecentUrls();
   } catch (err) {
     statusEl.textContent = `錯誤: ${err.message}`;
@@ -139,14 +155,15 @@ function render() {
     // draw the intact page first so anything not covered by a shard
     // (background colour, padding, content the DOM walk skipped) still
     // shows the real screenshot instead of the canvas's own background.
-    ctx.drawImage(screenshotImg, 0, 0);
+    // offsetX centres the captured content in the wider full-window canvas.
+    ctx.drawImage(screenshotImg, offsetX, 0);
 
     // punch a hole where a shard has actually broken loose, so its
     // original spot looks removed instead of duplicated.
     for (const body of shardBodies) {
       if (!body.isStatic) {
         const { x, y, w, h } = body.shardRect;
-        ctx.clearRect(x, y, w, h);
+        ctx.clearRect(x + offsetX, y, w, h);
       }
     }
 
@@ -187,7 +204,7 @@ function shatterIntoPowder(body, origin) {
     for (let c = 0; c < cols; c++) {
       const px = x + c * pieceW;
       const py = y + r * pieceH;
-      const cx = px + pieceW / 2;
+      const cx = px + pieceW / 2 + offsetX; // canvas-space; shardRect below stays content-space for image sampling
       const cy = py + pieceH / 2;
       const piece = Matter.Bodies.rectangle(cx, cy, pieceW, pieceH, { isStatic: false });
       piece.shardRect = { x: px, y: py, w: pieceW, h: pieceH };
@@ -246,8 +263,12 @@ canvas.addEventListener('click', (evt) => {
   playBreakSound();
 });
 
-loadBtn.addEventListener('click', () => loadUrl(urlInput.value.trim()));
+loadBtn.addEventListener('click', () => loadUrl(urlInput.value));
 
 setupWorld();
 render();
 refreshRecentUrls();
+
+// shareable direct links: https://.../div-smash/#p=ching-tech.com
+const hashMatch = location.hash.match(/[#&]p=([^&]+)/);
+if (hashMatch) loadUrl(decodeURIComponent(hashMatch[1]));

@@ -2,37 +2,88 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>div-smash — 網頁解壓小遊戲</title>
+<meta name="description" content="貼一個網址,把它切成一塊塊碎片打爛——碎片依真實物理掉落、翻滾、堆疊。免費網頁解壓小遊戲。">
+<link rel="canonical" href="https://yazelin.github.io/div-smash/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="div-smash">
+<meta property="og:url" content="https://yazelin.github.io/div-smash/">
+<meta property="og:title" content="div-smash — 網頁解壓小遊戲">
+<meta property="og:description" content="貼一個網址,把它切成一塊塊碎片打爛——碎片依真實物理掉落、翻滾、堆疊。">
+<meta property="og:image" content="https://yazelin.github.io/div-smash/og-image.png">
+<meta property="og:image:secure_url" content="https://yazelin.github.io/div-smash/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="zh_TW">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="div-smash — 網頁解壓小遊戲">
+<meta name="twitter:description" content="貼一個網址,把它切成一塊塊碎片打爛——碎片依真實物理掉落、翻滾、堆疊。">
+<meta name="twitter:image" content="https://yazelin.github.io/div-smash/og-image.png">
+
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
 <style>
-  body { margin: 0; font-family: system-ui, sans-serif; background: #222; color: #eee; }
+  :root {
+    --bg: #1c1c1e;
+    --surface: #2a2a2d;
+    --surface-hover: #38383c;
+    --border: #48484c;
+    --text: #eee;
+    --text-dim: #8f8f96;
+    --accent: #ff5a36;
+    --accent-hover: #ff7455;
+  }
+  body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
   #controls { padding: 12px; display: flex; gap: 8px; }
-  #url-input { flex: 1; padding: 8px; font-size: 14px; }
-  #load-btn { padding: 8px 16px; }
-  #stage { display: block; background: #333; margin: 0 auto; }
-  #status { padding: 0 12px 12px; font-size: 13px; color: #aaa; }
+  #url-input {
+    flex: 1; padding: 10px 12px; font-size: 14px; font-family: inherit;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  #url-input::placeholder { color: var(--text-dim); }
+  #url-input:focus { outline: none; border-color: var(--accent); }
+  #load-btn {
+    padding: 10px 20px; font-size: 14px; font-family: inherit; font-weight: 600;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer;
+  }
+  #load-btn:hover { background: var(--accent-hover); }
+  #load-btn:disabled { background: var(--surface); color: var(--text-dim); cursor: default; }
+  #stage { display: block; background: var(--bg); }
+  #status { padding: 0 12px 12px; font-size: 13px; color: var(--text-dim); }
   #recent { padding: 0 12px 12px; font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  #recent span.label { color: #888; }
-  #recent button { background: #333; color: #ccc; border: 1px solid #555; border-radius: 12px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
-  #recent button:hover { background: #444; }
-  .title-footer { display: flex; justify-content: center; gap: 14px; padding: 16px 12px 24px; }
+  #recent span.label { color: var(--text-dim); }
+  #recent button {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  }
+  #recent button:hover { background: var(--surface-hover); }
+  .title-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: center; gap: 14px; padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px);
+  }
   .footer-icon {
     display: inline-flex; align-items: center; justify-content: center;
     width: 44px; height: 44px; border-radius: 50%;
-    color: #ccc; background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-dim); background: var(--surface);
+    border: 1px solid var(--border);
     transition: background 0.15s, color 0.15s;
   }
-  .footer-icon:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+  .footer-icon:hover { background: var(--surface-hover); color: var(--text); }
 </style>
 </head>
 <body>
-  <div id="controls">
-    <input id="url-input" placeholder="貼上要破壞的網址,例如 https://example.com" value="https://example.com">
-    <button id="load-btn">載入</button>
+  <div id="top-bar">
+    <div id="controls">
+      <input id="url-input" placeholder="貼上要破壞的網址,例如 https://example.com" value="https://example.com">
+      <button id="load-btn">載入</button>
+    </div>
+    <div id="status"></div>
+    <div id="recent"></div>
   </div>
-  <div id="status"></div>
-  <div id="recent"></div>
   <canvas id="stage" width="1280" height="1200"></canvas>
   <footer class="title-footer">
     <a class="footer-icon" href="https://github.com/yazelin/div-smash" target="_blank" rel="noopener" aria-label="GitHub 原始碼" title="GitHub 原始碼">
