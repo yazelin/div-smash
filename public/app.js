@@ -26,7 +26,10 @@ async function refreshRecentUrls() {
     for (const url of data.urls) {
       const btn = document.createElement('button');
       btn.textContent = url;
-      btn.addEventListener('click', () => { urlInput.value = url; });
+      btn.addEventListener('click', () => {
+        urlInput.value = url;
+        loadUrl(url);
+      });
       recentEl.appendChild(btn);
     }
   } catch {
