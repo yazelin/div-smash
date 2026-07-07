@@ -161,23 +161,75 @@ function render() {
 
 const EXPLOSION_RADIUS = 140;
 const EXPLOSION_STRENGTH = 14;
+const SHATTER_CHANCE = 0.5;
+const SHATTER_MIN_PIECE = 24;
+const SHATTER_MAX_GRID = 5;
+
+// Splits an already-loose shard into a grid of smaller fragments, each
+// getting its own outward kick from the hit point - a second hit on the
+// same piece has a chance to pulverize it further instead of staying one
+// solid rectangle forever. Pieces already near SHATTER_MIN_PIECE just fall
+// through to a normal re-kick (see the shatterable check below).
+function shatterIntoPowder(body, origin) {
+  const { x, y, w, h } = body.shardRect;
+  Matter.World.remove(engine.world, body);
+  shardBodies.splice(shardBodies.indexOf(body), 1);
+
+  const cols = Math.max(1, Math.min(SHATTER_MAX_GRID, Math.floor(w / SHATTER_MIN_PIECE)));
+  const rows = Math.max(1, Math.min(SHATTER_MAX_GRID, Math.floor(h / SHATTER_MIN_PIECE)));
+  const pieceW = w / cols;
+  const pieceH = h / rows;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const px = x + c * pieceW;
+      const py = y + r * pieceH;
+      const cx = px + pieceW / 2;
+      const cy = py + pieceH / 2;
+      const piece = Matter.Bodies.rectangle(cx, cy, pieceW, pieceH, { isStatic: false });
+      piece.shardRect = { x: px, y: py, w: pieceW, h: pieceH };
+
+      const dx = cx - origin.x;
+      const dy = cy - origin.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      Matter.Body.setVelocity(piece, {
+        x: (dx / dist) * 10 + (Math.random() - 0.5) * 4,
+        y: (dy / dist) * 10 - 3 + (Math.random() - 0.5) * 4,
+      });
+      Matter.Body.setAngularVelocity(piece, (Math.random() - 0.5) * 0.5);
+
+      Matter.World.add(engine.world, piece);
+      shardBodies.push(piece);
+    }
+  }
+}
 
 canvas.addEventListener('click', (evt) => {
   if (!engine) return;
   const rect = canvas.getBoundingClientRect();
   const point = { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
 
-  let hitAny = false;
-  for (const body of shardBodies) {
+  const hits = shardBodies.filter(body => {
+    const dx = body.position.x - point.x;
+    const dy = body.position.y - point.y;
+    return Math.sqrt(dx * dx + dy * dy) <= EXPLOSION_RADIUS;
+  });
+  if (hits.length === 0) return;
+
+  const toShatter = [];
+  for (const body of hits) {
     const dx = body.position.x - point.x;
     const dy = body.position.y - point.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > EXPLOSION_RADIUS) continue;
-
-    hitAny = true;
     const falloff = 1 - dist / EXPLOSION_RADIUS;
     const dirX = dist > 1 ? dx / dist : Math.random() - 0.5;
     const dirY = dist > 1 ? dy / dist : -1;
+
+    const shatterable = body.shardRect.w > SHATTER_MIN_PIECE * 1.5 && body.shardRect.h > SHATTER_MIN_PIECE * 1.5;
+    if (!body.isStatic && shatterable && Math.random() < SHATTER_CHANCE) {
+      toShatter.push(body);
+      continue;
+    }
 
     Matter.Body.setStatic(body, false);
     Matter.Body.setVelocity(body, {
@@ -186,7 +238,9 @@ canvas.addEventListener('click', (evt) => {
     });
     Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.3);
   }
-  if (hitAny) playBreakSound();
+  for (const body of toShatter) shatterIntoPowder(body, point);
+
+  playBreakSound();
 });
 
 loadBtn.addEventListener('click', () => loadUrl(urlInput.value.trim()));
