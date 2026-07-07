@@ -269,6 +269,11 @@ setupWorld();
 render();
 refreshRecentUrls();
 
-// shareable direct links: https://.../div-smash/#p=ching-tech.com
+// shareable direct links - any of these auto-load on open:
+//   .../div-smash/?url=ching-tech.com
+//   .../div-smash/?p=ching-tech.com
+//   .../div-smash/#p=ching-tech.com
+const queryParams = new URLSearchParams(location.search);
 const hashMatch = location.hash.match(/[#&]p=([^&]+)/);
-if (hashMatch) loadUrl(decodeURIComponent(hashMatch[1]));
+const initialUrl = queryParams.get('url') || queryParams.get('p') || (hashMatch ? decodeURIComponent(hashMatch[1]) : null);
+if (initialUrl) loadUrl(initialUrl);
